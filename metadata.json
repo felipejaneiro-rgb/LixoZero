@@ -1,0 +1,8 @@
+{
+  "name": "LixoZero - Combate ao Desperdício",
+  "description": "Aplicativo focado na redução de desperdício de alimentos com controle de estoque inteligente, alertas de validade e impacto financeiro.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
