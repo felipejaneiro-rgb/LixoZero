@@ -1,12 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { StorageType } from "../types";
 
-// Inicialização segura da API
-const getAIClient = () => {
-  const apiKey = process.env.API_KEY || "";
-  return new GoogleGenAI({ apiKey });
-};
-
 export interface IdentifiedFood {
   name: string;
   quantity: number;
@@ -33,18 +27,25 @@ const FOOD_SCHEMA = {
   required: ["name", "quantity", "unit", "storageType", "expiryDays", "estimatedPrice"]
 };
 
+// Helper para obter o cliente AI de forma segura
+const getAI = () => {
+  const apiKey = process.env.API_KEY || "";
+  return new GoogleGenAI({ apiKey });
+};
+
 export const identifyFoodInput = async (input: string | { data: string, mimeType: string }): Promise<IdentifiedFood[]> => {
-  const ai = getAIClient();
   const isImage = typeof input !== 'string';
-  
   const prompt = isImage 
     ? "Identifique os alimentos na imagem, quantidades e validade."
-    : `Extraia alimentos e quantidades deste texto: "${input}".`;
+    : `Extraia alimentos e quantidades deste texto em JSON: "${input}".`;
 
   try {
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: isImage ? { parts: [{ inlineData: input }, { text: prompt }] } : prompt,
+      contents: isImage 
+        ? { parts: [{ inlineData: input }, { text: prompt }] } 
+        : { parts: [{ text: prompt }] },
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -55,17 +56,17 @@ export const identifyFoodInput = async (input: string | { data: string, mimeType
     });
     return JSON.parse(response.text || '[]');
   } catch (e) {
-    console.error("Erro no Gemini:", e);
+    console.error("Erro no Gemini identifyFoodInput:", e);
     return [];
   }
 };
 
 export const interpretConsumption = async (input: string): Promise<{ name: string, quantity: number }[]> => {
-  const ai = getAIClient();
   try {
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `O usuário disse: "${input}". Extraia o que foi consumido em JSON.`,
+      contents: { parts: [{ text: `O usuário disse: "${input}". Extraia o que foi consumido em JSON.` }] },
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -83,6 +84,7 @@ export const interpretConsumption = async (input: string): Promise<{ name: strin
     });
     return JSON.parse(response.text || '[]');
   } catch (e) {
+    console.error("Erro no Gemini interpretConsumption:", e);
     return [];
   }
 };
